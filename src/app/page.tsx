@@ -1,21 +1,13 @@
-'use client';
+import Navbar from '@/components/Navbar'
+import Carousel from '@/components/Carousel'
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.push('/login');
-  }, [router]);
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Redirecting...</p>
-      </div>
-    </div>
-  );
+    <>
+      <Navbar />
+      <main style={{ paddingTop: 60, background: 'var(--gray-950)', minHeight: '100vh' }}>
+        <Carousel />
+      </main>
+    </>
+  )
 }
