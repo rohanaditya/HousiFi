@@ -5,7 +5,18 @@ export default function LandingPage() {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: 60, background: 'var(--gray-950)', minHeight: '100vh' }}>
+      <main
+        style={{
+          marginTop: 60,
+          height: 'calc(100vh - 60px)',
+          background: 'var(--gray-950)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 24px',
+          overflow: 'hidden',
+        }}
+      >
         <Carousel />
       </main>
     </>
