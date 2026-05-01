@@ -9,6 +9,7 @@ const config = createConfig({
   chains: [sepolia],
   connectors: [metaMask()],
   transports: { [sepolia.id]: http() },
+  ssr: true,
 })
 
 const queryClient = new QueryClient()

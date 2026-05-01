@@ -1,35 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import propertiesData from '@/data/properties.json'
+import { fetchPropertiesFromSupabase } from '@/lib/propertyTransform'
+import type { Property } from '@/types/property'
 
 const DURATION = 5000
-
-type Property = {
-  id: number
-  name: string
-  location: string
-  details: string
-  image: string
-  gradient: string
-  glow: string
-  tagClass: string
-  tagDot: string
-  tagText: string
-  flatPrice: string
-  buyerPays: string
-  equityGap: string
-  area: string
-  investors: 0 | 1
-  investorType: 'majority' | 'small' | null
-  fundingProgress: number
-  raised: string
-  target: string
-  progressFill: string
-  status: string
-}
-
-const properties = propertiesData.properties as Property[]
 
 function InvestorButtons({ investors, investorType }: { investors: 0 | 1; investorType: 'majority' | 'small' | null }) {
   const majorityTaken = investors === 1 && investorType === 'majority'
@@ -54,17 +29,48 @@ function InvestorButtons({ investors, investorType }: { investors: 0 | 1; invest
 export default function Carousel() {
   const [current, setCurrent] = useState(0)
   const [barWidth, setBarWidth] = useState(0)
+  const [properties, setProperties] = useState<Property[]>([])
+  const [loading, setLoading] = useState(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const goTo = useCallback((n: number) => {
-    setCurrent(n)
+  // Fetch properties from Supabase
+  useEffect(() => {
+    const loadProperties = async () => {
+      try {
+        const data = await fetchPropertiesFromSupabase()
+        setProperties(data)
+      } catch (error) {
+        console.error('Failed to load properties:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProperties()
   }, [])
 
-  const next = useCallback(() => setCurrent((prev) => (prev + 1) % properties.length), [])
-  const prev = useCallback(() => setCurrent((prev) => (prev - 1 + properties.length) % properties.length), [])
+  const goTo = useCallback((n: number) => {
+    if (properties.length > 0) {
+      setCurrent(n % properties.length)
+    }
+  }, [properties.length])
+
+  const next = useCallback(() => {
+    if (properties.length > 0) {
+      setCurrent((prev) => (prev + 1) % properties.length)
+    }
+  }, [properties.length])
+
+  const prev = useCallback(() => {
+    if (properties.length > 0) {
+      setCurrent((prev) => (prev - 1 + properties.length) % properties.length)
+    }
+  }, [properties.length])
 
   useEffect(() => {
+    if (properties.length === 0) return
+
     if (timerRef.current) clearTimeout(timerRef.current)
     if (animRef.current) clearTimeout(animRef.current)
 
@@ -76,7 +82,29 @@ export default function Carousel() {
       if (timerRef.current) clearTimeout(timerRef.current)
       if (animRef.current) clearTimeout(animRef.current)
     }
-  }, [current, next])
+  }, [current, next, properties.length])
+
+  if (loading) {
+    return (
+      <div className="carousel-section">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.6)' }}>Loading properties...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (properties.length === 0) {
+    return (
+      <div className="carousel-section">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.6)' }}>No properties available</p>
+        </div>
+      </div>
+    )
+  }
+
+  const p = properties[current]
 
   return (
     <div className="carousel-section">
@@ -91,24 +119,20 @@ export default function Carousel() {
             }}
           />
 
-          {properties.map((p, idx) => (
-            <div key={p.id} className={`slide${current === idx ? ' active' : ''}`}>
+          {properties.map((prop, idx) => (
+            <div key={prop.id} className={`slide${current === idx ? ' active' : ''}`}>
               {/* Left: gradient + content */}
               <div className="slide-left">
-                <div className="slide-bg" style={{ background: p.gradient }} />
                 <div className="slide-noise" />
-                <div style={{ position: 'absolute', inset: 0, background: p.glow }} />
                 <div className="slide-overlay" />
                 <div className="slide-content">
-                  <h2 className="slide-title">{p.name}</h2>
-                  <p className="slide-location">{p.location} · {p.details}</p>
+                  <h2 className="slide-title">{prop.name}</h2>
+                  <p className="slide-location">{prop.location} · {prop.details}</p>
 
                   <div className="slide-data-row">
                     {[
-                      { label: 'Flat price', value: p.flatPrice },
-                      { label: 'You pay', value: p.buyerPays },
-                      { label: 'Equity gap', value: p.equityGap },
-                      { label: 'Area', value: p.area },
+                      { label: 'Flat price', value: prop.flat_price },
+                      { label: 'Area', value: prop.area },
                     ].map((d) => (
                       <div key={d.label} className="data-cell">
                         <div className="data-cell-label">{d.label}</div>
@@ -117,7 +141,7 @@ export default function Carousel() {
                     ))}
                   </div>
 
-                  <InvestorButtons investors={p.investors} investorType={p.investorType} />
+                  {/* <InvestorButtons investors={prop.investors} investorType={prop.investorType} /> */}
                 </div>
               </div>
 
@@ -125,8 +149,8 @@ export default function Carousel() {
               <div className="slide-right">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`/properties-images/${p.image}`}
-                  alt={p.name}
+                  src={`/properties-images/${prop.image}`}
+                  alt={prop.name}
                 />
                 <div className="slide-right-fade" />
               </div>
@@ -139,9 +163,9 @@ export default function Carousel() {
 
         {/* Thumbnails — real property images */}
         <div className="thumbs-strip">
-          {properties.map((p, idx) => (
+          {properties.map((prop, idx) => (
             <div
-              key={p.id}
+              key={prop.id}
               className={`thumb${current === idx ? ' active' : ''}`}
               onClick={() => goTo(idx)}
               role="button"
@@ -151,14 +175,14 @@ export default function Carousel() {
               <div
                 className="thumb-bg"
                 style={{
-                  backgroundImage: `url('/properties-images/${p.image}')`,
+                  backgroundImage: `url('/properties-images/${prop.image}')`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}
               />
               <div className="thumb-overlay">
-                <div className="thumb-name">{p.name}</div>
-                <div className="thumb-city">{p.location}</div>
+                <div className="thumb-name">{prop.name}</div>
+                <div className="thumb-city">{prop.location}</div>
               </div>
             </div>
           ))}
