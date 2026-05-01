@@ -100,12 +100,6 @@ export default function Carousel() {
                 <div style={{ position: 'absolute', inset: 0, background: p.glow }} />
                 <div className="slide-overlay" />
                 <div className="slide-content">
-                  <span className={`slide-tag ${p.tagClass}`}>
-                    <svg width="6" height="6" viewBox="0 0 6 6">
-                      <circle cx="3" cy="3" r="3" fill={p.tagDot} />
-                    </svg>
-                    {p.tagText}
-                  </span>
                   <h2 className="slide-title">{p.name}</h2>
                   <p className="slide-location">{p.location} · {p.details}</p>
 
@@ -121,17 +115,6 @@ export default function Carousel() {
                         <div className="data-cell-value">{d.value}</div>
                       </div>
                     ))}
-                  </div>
-
-                  <div className="progress-row">
-                    <div className="progress-track">
-                      <div
-                        className="progress-fill"
-                        style={{ width: `${p.fundingProgress}%`, background: p.progressFill }}
-                      />
-                    </div>
-                    <span className="progress-label">{p.fundingProgress}% funded</span>
-                    <span className="progress-count">{p.raised} / {p.target}</span>
                   </div>
 
                   <InvestorButtons investors={p.investors} investorType={p.investorType} />
