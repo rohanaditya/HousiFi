@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { DM_Serif_Display, DM_Sans, DM_Mono } from 'next/font/google'
+import { Web3Provider } from '@/components/Web3Provider'
 import './globals.css'
 
 const dmSerifDisplay = DM_Serif_Display({
@@ -36,7 +37,11 @@ export default function RootLayout({
       lang="en"
       className={`${dmSerifDisplay.variable} ${dmSans.variable} ${dmMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <Web3Provider>
+          {children}
+        </Web3Provider>
+      </body>
     </html>
   )
 }

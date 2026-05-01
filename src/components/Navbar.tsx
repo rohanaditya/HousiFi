@@ -2,15 +2,31 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useConnect, useAccount, useDisconnect } from 'wagmi'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
+  const { connect, connectors } = useConnect()
+  const { address, isConnected } = useAccount()
+  const { disconnect } = useDisconnect()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  const shortAddress = address
+    ? `${address.slice(0, 6)}…${address.slice(-4)}`
+    : null
+
+  const handleWalletButton = () => {
+    if (isConnected) {
+      disconnect()
+    } else {
+      connect({ connector: connectors[0] })
+    }
+  }
 
   return (
     <nav
@@ -25,8 +41,12 @@ export default function Navbar() {
       </Link>
 
       <div className="nav-right">
-        <span className="wallet-address">0x7a3f…e2c1</span>
-        <button className="btn-connect">Connect wallet</button>
+        {isConnected && shortAddress && (
+          <span className="wallet-address">{shortAddress}</span>
+        )}
+        <button className="btn-connect" onClick={handleWalletButton}>
+          {isConnected ? 'Disconnect' : 'Connect wallet'}
+        </button>
       </div>
     </nav>
   )
