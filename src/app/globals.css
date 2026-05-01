@@ -471,7 +471,7 @@ nav#navbar {
   font-size: 13px;
   font-family: var(--font-body);
   font-weight: 500;
-  padding: 10px 20px;
+  padding: 10px 40px;
   background: #fff;
   color: var(--gray-900);
   border: none;
@@ -483,7 +483,7 @@ nav#navbar {
 .btn-slide-ghost {
   font-size: 13px;
   font-family: var(--font-body);
-  padding: 10px 18px;
+  padding: 10px 40px;
   background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.75);
   border: 0.5px solid rgba(255,255,255,0.15);
@@ -495,7 +495,7 @@ nav#navbar {
 .btn-slide-disabled {
   font-size: 13px;
   font-family: var(--font-body);
-  padding: 10px 18px;
+  padding: 10px 40px;
   background: rgba(255,255,255,0.03);
   color: rgba(255,255,255,0.2);
   border: 0.5px solid rgba(255,255,255,0.06);
@@ -520,7 +520,7 @@ nav#navbar {
   user-select: none;
 }
 .carousel-nav:hover { background: rgba(255,255,255,0.12); color: #fff; }
-.carousel-nav.left { left: 16px; }
+.carousel-nav.left { left: calc(56% + 14px); }
 .carousel-nav.right { right: 16px; }
 .timer-bar {
   position: absolute;
@@ -922,6 +922,35 @@ footer {
   border: 0.5px solid rgba(29,158,117,0.2);
   padding: 5px 10px;
   border-radius: 999px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1280px) {
+  .carousel-section { max-width: 100%; padding-left: 16px; padding-right: 16px; }
+  .carousel-wrap { height: 420px; }
+  .carousel-nav.left { left: calc(56% + 10px); }
+  .slide-title { font-size: 28px; }
+  .slide-content { padding: 24px 28px; }
+  .data-cell { padding: 8px 14px; }
+  .data-cell-value { font-size: 14px; }
+}
+
+@media (max-width: 1024px) {
+  .carousel-wrap { height: 380px; }
+  .slide-title { font-size: 24px; }
+  .slide-location { font-size: 12px; }
+  .data-cell-value { font-size: 13px; }
+  .btn-slide-primary, .btn-slide-ghost, .btn-slide-disabled { padding: 9px 24px; font-size: 12px; }
+}
+
+@media (max-width: 768px) {
+  .carousel-wrap { height: auto; }
+  .slide { flex-direction: column; }
+  .slide-left { flex: 0 0 auto; min-height: 300px; }
+  .slide-right { height: 200px; }
+  .carousel-nav.left { left: 12px; top: 300px; }
+  .carousel-nav.right { right: 12px; top: 300px; }
+  .thumbs-strip { display: none; }
 }
 
 /* ── HERO ANIMATIONS ── */
