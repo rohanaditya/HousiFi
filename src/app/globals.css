@@ -309,8 +309,9 @@ nav#navbar {
   transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   transform: scale(1.04);
   display: flex;
+  pointer-events: none;
 }
-.slide.active { opacity: 1; transform: scale(1); }
+.slide.active { opacity: 1; transform: scale(1); pointer-events: auto; }
 
 /* Left panel — gradient bg + content */
 .slide-left {
@@ -466,6 +467,7 @@ nav#navbar {
 .slide-actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .btn-slide-primary {
   font-size: 13px;
@@ -478,6 +480,7 @@ nav#navbar {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .btn-slide-primary:hover { background: rgba(255,255,255,0.9); transform: translateY(-1px); }
 .btn-slide-ghost {
@@ -490,6 +493,7 @@ nav#navbar {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .btn-slide-ghost:hover { background: rgba(255,255,255,0.14); color: #fff; }
 .btn-slide-disabled {
@@ -951,6 +955,8 @@ footer {
   .carousel-nav.left { left: 12px; top: 300px; }
   .carousel-nav.right { right: 12px; top: 300px; }
   .thumbs-strip { display: none; }
+  .slide-actions { align-items: stretch; }
+  .btn-slide-primary, .btn-slide-ghost, .btn-slide-disabled { flex: 1 1 180px; }
 }
 
 /* ── HERO ANIMATIONS ── */

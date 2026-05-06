@@ -5,23 +5,36 @@ import { fetchPropertiesFromSupabase } from '@/lib/propertyTransform'
 import type { Property } from '@/types/property'
 
 const DURATION = 5000
+const BOUGHT_SHARE_THRESHOLD = 0.75
 
-function InvestorButtons({ investors, investorType }: { investors: 0 | 1; investorType: 'majority' | 'small' | null }) {
-  const majorityTaken = investors === 1 && investorType === 'majority'
-  const smallTaken = investors === 1 && investorType === 'small'
+function getBoughtShareRatio(flatPrice: number, remaining: number) {
+  if (flatPrice <= 0) return 0
+
+  return Math.max(0, (flatPrice - remaining) / flatPrice)
+}
+
+function InvestorButtons({ flatPrice, remaining }: { flatPrice: number; remaining: number }) {
+  const boughtShareRatio = getBoughtShareRatio(flatPrice, remaining)
+  const hasAnyShareBeenBought = boughtShareRatio > 0
+  const majorityShareBought = boughtShareRatio >= BOUGHT_SHARE_THRESHOLD
+  const minorityShareDisabled = hasAnyShareBeenBought && !majorityShareBought
 
   return (
     <div className="slide-actions">
-      {majorityTaken ? (
-        <button className="btn-slide-disabled" disabled>Buy Majority</button>
-      ) : (
-        <button className="btn-slide-primary">Buy Majority</button>
-      )}
-      {smallTaken ? (
-        <button className="btn-slide-disabled" disabled>Buy Smaller %</button>
-      ) : (
-        <button className="btn-slide-ghost">Buy Smaller %</button>
-      )}
+      <button
+        className={majorityShareBought ? 'btn-slide-disabled' : 'btn-slide-primary'}
+        type="button"
+        disabled={majorityShareBought}
+      >
+        Buy Majority Share
+      </button>
+      <button
+        className={minorityShareDisabled ? 'btn-slide-disabled' : 'btn-slide-ghost'}
+        type="button"
+        disabled={minorityShareDisabled}
+      >
+        Buy Minority Share
+      </button>
     </div>
   )
 }
@@ -74,11 +87,14 @@ export default function Carousel() {
     if (timerRef.current) clearTimeout(timerRef.current)
     if (animRef.current) clearTimeout(animRef.current)
 
-    setBarWidth(0)
-    animRef.current = setTimeout(() => setBarWidth(100), 30)
+    const resetTimer = setTimeout(() => {
+      setBarWidth(0)
+      animRef.current = setTimeout(() => setBarWidth(100), 30)
+    }, 0)
     timerRef.current = setTimeout(next, DURATION)
 
     return () => {
+      clearTimeout(resetTimer)
       if (timerRef.current) clearTimeout(timerRef.current)
       if (animRef.current) clearTimeout(animRef.current)
     }
@@ -103,8 +119,6 @@ export default function Carousel() {
       </div>
     )
   }
-
-  const p = properties[current]
 
   return (
     <div className="carousel-section">
@@ -141,7 +155,7 @@ export default function Carousel() {
                     ))}
                   </div>
 
-                  {/* <InvestorButtons investors={prop.investors} investorType={prop.investorType} /> */}
+                  <InvestorButtons flatPrice={prop.flat_price} remaining={prop.remaining} />
                 </div>
               </div>
 
