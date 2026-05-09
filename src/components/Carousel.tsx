@@ -3,40 +3,45 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchPropertiesFromSupabase } from '@/lib/propertyTransform'
 import type { Property } from '@/types/property'
+import BuySharesButton from '@/components/BuySharesButton'
 
 const DURATION = 5000
-const BOUGHT_SHARE_THRESHOLD = 0.75
 
-function getBoughtShareRatio(flatPrice: number, remaining: number) {
-  if (flatPrice <= 0) return 0
+function InvestorButtons({ property, onSuccess }: { property: Property; onSuccess: () => void }) {
+  const { investor_count, flat_price, remaining } = property
 
-  return Math.max(0, (flatPrice - remaining) / flatPrice)
-}
+  if (investor_count === 2) {
+    return <p className="fully-funded-label">Fully funded</p>
+  }
 
-function InvestorButtons({ flatPrice, remaining }: { flatPrice: number; remaining: number }) {
-  const boughtShareRatio = getBoughtShareRatio(flatPrice, remaining)
-  const hasAnyShareBeenBought = boughtShareRatio > 0
-  const majorityShareBought = boughtShareRatio >= BOUGHT_SHARE_THRESHOLD
-  const minorityShareDisabled = hasAnyShareBeenBought && !majorityShareBought
+  if (investor_count === 0) {
+    return (
+      <div className="slide-actions">
+        <BuySharesButton property={property} shareType="major" tokenAmount={85} onSuccess={onSuccess} />
+        <BuySharesButton property={property} shareType="minor" tokenAmount={15} onSuccess={onSuccess} />
+      </div>
+    )
+  }
 
-  return (
-    <div className="slide-actions">
-      <button
-        className={majorityShareBought ? 'btn-slide-disabled' : 'btn-slide-primary'}
-        type="button"
-        disabled={majorityShareBought}
-      >
-        Buy Majority Share
-      </button>
-      <button
-        className={minorityShareDisabled ? 'btn-slide-disabled' : 'btn-slide-ghost'}
-        type="button"
-        disabled={minorityShareDisabled}
-      >
-        Buy Minority Share
-      </button>
-    </div>
-  )
+  if (investor_count === 1) {
+    const ratio = remaining / flat_price
+    if (ratio > 0.75) {
+      return (
+        <div className="slide-actions">
+          <BuySharesButton property={property} shareType="major" tokenAmount={85} onSuccess={onSuccess} />
+        </div>
+      )
+    }
+    if (ratio < 0.25) {
+      return (
+        <div className="slide-actions">
+          <BuySharesButton property={property} shareType="minor" tokenAmount={15} onSuccess={onSuccess} />
+        </div>
+      )
+    }
+  }
+
+  return null
 }
 
 export default function Carousel() {
@@ -48,20 +53,20 @@ export default function Carousel() {
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch properties from Supabase
-  useEffect(() => {
-    const loadProperties = async () => {
-      try {
-        const data = await fetchPropertiesFromSupabase()
-        setProperties(data)
-      } catch (error) {
-        console.error('Failed to load properties:', error)
-      } finally {
-        setLoading(false)
-      }
+  const loadProperties = useCallback(async () => {
+    try {
+      const data = await fetchPropertiesFromSupabase()
+      setProperties(data)
+    } catch (error) {
+      console.error('Failed to load properties:', error)
+    } finally {
+      setLoading(false)
     }
-
-    loadProperties()
   }, [])
+
+  useEffect(() => {
+    loadProperties()
+  }, [loadProperties])
 
   const goTo = useCallback((n: number) => {
     if (properties.length > 0) {
@@ -155,7 +160,7 @@ export default function Carousel() {
                     ))}
                   </div>
 
-                  <InvestorButtons flatPrice={prop.flat_price} remaining={prop.remaining} />
+                  <InvestorButtons property={prop} onSuccess={loadProperties} />
                 </div>
               </div>
 
