@@ -14,23 +14,30 @@ export async function buyShares(
 
     const propertyTokenAddress = PROPERTY_TOKENS[propertyId];
 
-    const tusdc = new ethers.Contract(CONTRACTS.testUSDC, TestUSDCABI, signer);
+    const tusdc = new ethers.Contract(CONTRACTS.testUSDC, TestUSDCABI.abi, signer);
 
     const buyerAddress = await signer.getAddress();
     const balance = await tusdc.balanceOf(buyerAddress);
+    console.log(`tUSDC Balance: ${ethers.formatUnits(balance, 18)} tUSDC`);
+    console.log(`Required tUSDC: ${ethers.formatUnits(usdcRaw, 18)} tUSDC`);
+    console.log("tUSDC contract address being used:", CONTRACTS.testUSDC);
     if (balance < usdcRaw) {
       throw new Error("Insufficient tUSDC balance");
     }
 
     const allowance = await tusdc.allowance(buyerAddress, CONTRACTS.propertyBuy);
+    console.log(`Current allowance: ${ethers.formatUnits(allowance, 18)} tUSDC`);
     if (allowance < usdcRaw) {
+      console.log("Approving tUSDC...");
       const approveTx = await tusdc.approve(CONTRACTS.propertyBuy, usdcRaw);
-      await approveTx.wait();
-      console.log("tUSDC approval confirmed");
+      console.log(`Approval tx sent: ${approveTx.hash}`);
+      const approveReceipt = await approveTx.wait();
+      console.log("tUSDC approval confirmed:", approveReceipt?.hash);
+    } else {
+      console.log("Already approved, skipping approval");
     }
 
-    const propertyBuy = new ethers.Contract(CONTRACTS.propertyBuy, PropertyBuyABI, signer);
-
+    const propertyBuy = new ethers.Contract(CONTRACTS.propertyBuy, PropertyBuyABI.abi, signer);
     const tx = await propertyBuy.buyShares(propertyTokenAddress, tokenAmount, usdcRaw);
     const receipt = await tx.wait();
 

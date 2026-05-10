@@ -1,7 +1,7 @@
 export const CONTRACTS = {
-  testUSDC:     "0x5F1821FeA6653C75Af0dB51F0148Ef47cab52E05",
-  propertyBuy:  "0x7b90Deaa6f8FF705f5BC9E04d7fec12dE53cAfe4",
-  propertySell: "0x290Ef5eB23932b620a10d7FB129d4A7dE4d2978a",
+  testUSDC:     "0x9076a4d4f905C109D5A8E41DdA4E767F44A16308",
+  propertyBuy:  "0xd32ea960dB2C7EFF89677f5de3668E1bC29600Fd",
+  propertySell: "0x13fFA9145f8885B6765F028C6D5AFf450074bbd3",
 } as const;
 
 export const PROPERTY_TOKENS: Record<number, string> = {

@@ -40,7 +40,10 @@ export async function POST(req: NextRequest) {
       USDC_ABI,
       adminWallet,
     );
+    
     const amountInWei = ethers.parseUnits(String(usdcAmount), 18);
+    console.log("usdcAmount received:", usdcAmount);
+    console.log("amountInWei:", amountInWei.toString());
     const mintTx = await usdc.mintFakeMoney(userAddress, amountInWei);
     await mintTx.wait();
 
