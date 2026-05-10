@@ -16,11 +16,11 @@ export async function POST(req: NextRequest) {
     }
 
     const { error: insertError } = await supabase.from("investments").insert({
-      propertyId,
-      investorAddress,
-      tokenAmount,
-      usdcPaid,
-      shareType,
+      property_id: propertyId,
+      investor_address: investorAddress,
+      token_amount: tokenAmount,
+      usdc_paid: usdcPaid,
+      share_type: shareType,
       buy_tx_hash: txHash,
       status: "active",
     });
@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     const { error: updateError } = await supabase
       .from("properties")
       .update({
-        remaining: property.remaining - usdcPaid,
-        investor_count: property.investor_count + 1,
+        remaining: property.remaining - tokenAmount,
+        investor_count: (property.investor_count ?? 0) + 1,
       })
       .eq("id", propertyId);
 
