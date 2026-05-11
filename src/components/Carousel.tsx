@@ -5,11 +5,11 @@ import { useAccount } from 'wagmi'
 import { fetchPropertiesFromSupabase } from '@/lib/propertyTransform'
 import { supabase } from '@/lib/supabase'
 import { sellShares } from '@/lib/sellShares'
-import { useEthersSigner } from '@/lib/useEthersSigner'
+import { getSepoliaSigner, useEthersSigner } from '@/lib/useEthersSigner'
 import type { Property } from '@/types/property'
 import BuySharesButton from '@/components/BuySharesButton'
 
-const DURATION = 5000
+const DURATION = 25000
 
 interface Investment {
   id: number
@@ -23,10 +23,12 @@ function UserInvestmentPanel({
   investment,
   property,
   onSuccess,
+  onProcessingChange,
 }: {
   investment: Investment
   property: Property
   onSuccess: () => void
+  onProcessingChange: (processing: boolean) => void
 }) {
   const signer = useEthersSigner()
   const [selling, setSelling] = useState(false)
@@ -36,18 +38,28 @@ function UserInvestmentPanel({
   const pnl = currentValue - investment.usdc_paid
   const pnlPositive = pnl >= 0
 
+  useEffect(() => {
+    if (!error) return
+
+    const timer = setTimeout(() => setError(null), 3000)
+    return () => clearTimeout(timer)
+  }, [error])
+
   async function handleSell() {
-    if (!signer) {
-      setError('Connect your wallet first')
-      return
-    }
     setSelling(true)
+    onProcessingChange(true)
     setError(null)
     try {
-      const usdcPayout = (investment.token_amount / 100) * property.flat_price
-      const { txHash } = await sellShares(signer, property.id, investment.token_amount, usdcPayout)
+      const activeSigner = await getSepoliaSigner(signer)
 
-      const investorAddress = await signer.getAddress()
+      if (!activeSigner) {
+        throw new Error('Connect your wallet first')
+      }
+
+      const usdcPayout = (investment.token_amount / 100) * property.flat_price
+      const { txHash } = await sellShares(activeSigner, property.id, investment.token_amount, usdcPayout)
+
+      const investorAddress = await activeSigner.getAddress()
       const res = await fetch('/api/investment/sell', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,6 +81,7 @@ function UserInvestmentPanel({
       setError(err instanceof Error ? err.message : 'Transaction failed')
     } finally {
       setSelling(false)
+      onProcessingChange(false)
     }
   }
 
@@ -116,18 +129,26 @@ function UserInvestmentPanel({
   )
 }
 
-function InvestorButtons({ property, onSuccess }: { property: Property; onSuccess: () => void }) {
+function InvestorButtons({
+  property,
+  onSuccess,
+  onProcessingChange,
+}: {
+  property: Property
+  onSuccess: () => void
+  onProcessingChange: (processing: boolean) => void
+}) {
   const { investor_count, flat_price, remaining } = property
 
   if (investor_count === 2) {
-    return <p className="fully-funded-label">Fully funded</p>
+    return null
   }
 
   if (investor_count === 0) {
     return (
       <div className="slide-actions">
-        <BuySharesButton property={property} shareType="major" tokenAmount={85} onSuccess={onSuccess} />
-        <BuySharesButton property={property} shareType="minor" tokenAmount={15} onSuccess={onSuccess} />
+        <BuySharesButton property={property} shareType="major" tokenAmount={85} onSuccess={onSuccess} onProcessingChange={onProcessingChange} />
+        <BuySharesButton property={property} shareType="minor" tokenAmount={15} onSuccess={onSuccess} onProcessingChange={onProcessingChange} />
       </div>
     )
   }
@@ -137,14 +158,14 @@ function InvestorButtons({ property, onSuccess }: { property: Property; onSucces
     if (ratio > 0.75) {
       return (
         <div className="slide-actions">
-          <BuySharesButton property={property} shareType="major" tokenAmount={85} onSuccess={onSuccess} />
+          <BuySharesButton property={property} shareType="major" tokenAmount={85} onSuccess={onSuccess} onProcessingChange={onProcessingChange} />
         </div>
       )
     }
     if (ratio < 0.25) {
       return (
         <div className="slide-actions">
-          <BuySharesButton property={property} shareType="minor" tokenAmount={15} onSuccess={onSuccess} />
+          <BuySharesButton property={property} shareType="minor" tokenAmount={15} onSuccess={onSuccess} onProcessingChange={onProcessingChange} />
         </div>
       )
     }
@@ -159,6 +180,7 @@ export default function Carousel() {
   const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [investments, setInvestments] = useState<Record<number, Investment>>({})
+  const [transactionProcessing, setTransactionProcessing] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -180,7 +202,7 @@ export default function Carousel() {
       const { data, error } = await supabase
         .from('investments')
         .select('id, property_id, token_amount, usdc_paid, share_type')
-        .eq('investor_address', walletAddress.toLowerCase())
+        .ilike('investor_address', walletAddress)
         .eq('status', 'active')
       if (error) throw error
       const byProperty: Record<number, Investment> = {}
@@ -234,6 +256,10 @@ export default function Carousel() {
     if (timerRef.current) clearTimeout(timerRef.current)
     if (animRef.current) clearTimeout(animRef.current)
 
+    if (transactionProcessing) {
+      return
+    }
+
     const resetTimer = setTimeout(() => {
       setBarWidth(0)
       animRef.current = setTimeout(() => setBarWidth(100), 30)
@@ -245,7 +271,7 @@ export default function Carousel() {
       if (timerRef.current) clearTimeout(timerRef.current)
       if (animRef.current) clearTimeout(animRef.current)
     }
-  }, [current, next, properties.length])
+  }, [current, next, properties.length, transactionProcessing])
 
   if (loading) {
     return (
@@ -294,7 +320,7 @@ export default function Carousel() {
 
                     <div className="slide-data-row">
                       {[
-                        { label: 'Flat price', value: prop.flat_price },
+                        { label: 'Total Property Price', value: prop.flat_price },
                         { label: 'Area', value: prop.area },
                       ].map((d) => (
                         <div key={d.label} className="data-cell">
@@ -304,13 +330,18 @@ export default function Carousel() {
                       ))}
                     </div>
 
-                    <InvestorButtons property={prop} onSuccess={handleSuccess} />
+                    <InvestorButtons
+                      property={prop}
+                      onSuccess={handleSuccess}
+                      onProcessingChange={setTransactionProcessing}
+                    />
 
                     {userInvestment && (
                       <UserInvestmentPanel
                         investment={userInvestment}
                         property={prop}
                         onSuccess={handleSuccess}
+                        onProcessingChange={setTransactionProcessing}
                       />
                     )}
                   </div>
@@ -318,6 +349,9 @@ export default function Carousel() {
 
                 {/* Right: property image */}
                 <div className="slide-right">
+                  {prop.investor_count === 2 && (
+                    <div className="sold-out-banner">Sold out</div>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/properties-images/${prop.image}`}

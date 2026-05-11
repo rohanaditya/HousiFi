@@ -4,7 +4,7 @@ import PropertyBuyABI from "./abis/PropertyBuy.json";
 import TestUSDCABI from "./abis/TestUSDC.json";
 
 export async function buyShares(
-  signer: any,
+  signer: ethers.Signer,
   propertyId: number,
   tokenAmount: number,
   usdcAmount: number
@@ -13,6 +13,9 @@ export async function buyShares(
     const usdcRaw = ethers.parseUnits(usdcAmount.toString(), 18);
 
     const propertyTokenAddress = PROPERTY_TOKENS[propertyId];
+    await assertContractExists(signer, CONTRACTS.testUSDC, "tUSDC");
+    await assertContractExists(signer, CONTRACTS.propertyBuy, "PropertyBuy");
+    await assertContractExists(signer, propertyTokenAddress, "PropertyToken");
 
     const tusdc = new ethers.Contract(CONTRACTS.testUSDC, TestUSDCABI.abi, signer);
 
@@ -43,7 +46,31 @@ export async function buyShares(
 
     return { success: true, txHash: receipt.hash };
   } catch (error) {
-    console.error(error);
     throw error;
+  }
+}
+
+async function assertContractExists(
+  signer: ethers.Signer,
+  address: string | undefined,
+  label: string
+) {
+  if (!address) {
+    throw new Error(`${label} contract address is not configured for this property.`);
+  }
+
+  const provider = signer.provider;
+  if (!provider) {
+    throw new Error("Wallet provider is not available.");
+  }
+
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== 11155111) {
+    throw new Error("Please switch MetaMask to Sepolia and try again.");
+  }
+
+  const code = await provider.getCode(address);
+  if (code === "0x") {
+    throw new Error(`${label} contract was not found on Sepolia at ${address}.`);
   }
 }

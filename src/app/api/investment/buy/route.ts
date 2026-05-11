@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     const { error: insertError } = await supabase.from("investments").insert({
       property_id: propertyId,
-      investor_address: investorAddress,
+      investor_address: investorAddress.toLowerCase(),
       token_amount: tokenAmount,
       usdc_paid: usdcPaid,
       share_type: shareType,
