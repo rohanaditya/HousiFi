@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useEthersSigner } from '@/lib/useEthersSigner'
+import { useEffect, useState } from 'react'
+import { getSepoliaSigner, useEthersSigner } from '@/lib/useEthersSigner'
 import { buyShares } from '@/lib/buyShares'
 import type { Property } from '@/types/property'
 
@@ -10,9 +10,16 @@ interface Props {
   shareType: 'major' | 'minor'
   tokenAmount: number
   onSuccess: () => void
+  onProcessingChange?: (processing: boolean) => void
 }
 
-export default function BuySharesButton({ property, shareType, tokenAmount, onSuccess }: Props) {
+export default function BuySharesButton({
+  property,
+  shareType,
+  tokenAmount,
+  onSuccess,
+  onProcessingChange,
+}: Props) {
   const signer = useEthersSigner()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,23 +28,34 @@ export default function BuySharesButton({ property, shareType, tokenAmount, onSu
   const usdcAmount = shareType === 'major'
     ? property.flat_price * 0.85
     : property.flat_price * 0.15
+  const payLabel = `Pay ${usdcAmount.toLocaleString()} tUSDC`
+
+  useEffect(() => {
+    if (!error) return
+
+    const timer = setTimeout(() => setError(null), 3000)
+    return () => clearTimeout(timer)
+  }, [error])
 
   async function handleClick() {
-    if (!signer) {
-      setError('Connect your wallet first')
-      return
-    }
     setLoading(true)
+    onProcessingChange?.(true)
     setError(null)
     try {
-      const { txHash } = await buyShares(signer, property.id, tokenAmount, usdcAmount)
+      const activeSigner = await getSepoliaSigner(signer)
+
+      if (!activeSigner) {
+        throw new Error('Connect your wallet first')
+      }
+
+      const { txHash } = await buyShares(activeSigner, property.id, tokenAmount, usdcAmount)
 
       const res = await fetch('/api/investment/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           propertyId: property.id,
-          investorAddress: await signer.getAddress(),
+          investorAddress: await activeSigner.getAddress(),
           tokenAmount,
           usdcPaid: usdcAmount,
           shareType,
@@ -55,16 +73,18 @@ export default function BuySharesButton({ property, shareType, tokenAmount, onSu
       setError(err instanceof Error ? err.message : 'Transaction failed')
     } finally {
       setLoading(false)
+      onProcessingChange?.(false)
     }
   }
 
   return (
-    <div>
+    <div className="buy-share-control" data-pay={payLabel}>
       <button
         className={shareType === 'major' ? 'btn-slide-primary' : 'btn-slide-ghost'}
         type="button"
         onClick={handleClick}
         disabled={loading}
+        aria-label={`${label}. ${payLabel}`}
       >
         {loading ? 'Processing...' : label}
       </button>

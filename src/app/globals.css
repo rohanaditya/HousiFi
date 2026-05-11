@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 :root {
+  --font-display: Verdana, sans-serif;
+  --font-body: Verdana, sans-serif;
+  --font-mono: Verdana, sans-serif;
   --purple-900: #1E1754;
   --purple-800: #2E2480;
   --purple-700: #3D30A8;
@@ -41,7 +44,7 @@ html {
 }
 
 body {
-  font-family: var(--font-body);
+  font-family: Verdana, sans-serif;
   background: var(--gray-950);
   color: var(--white);
   font-size: 15px;
@@ -313,6 +316,22 @@ nav#navbar {
 }
 .slide.active { opacity: 1; transform: scale(1); pointer-events: auto; }
 
+.sold-out-banner {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 12;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(185, 28, 28, 0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
 /* Left panel — gradient bg + content */
 .slide-left {
   flex: 0 0 56%;
@@ -496,6 +515,34 @@ nav#navbar {
   white-space: nowrap;
 }
 .btn-slide-ghost:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.buy-share-control {
+  position: relative;
+  display: inline-flex;
+}
+.buy-share-control::after {
+  content: attr(data-pay);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  background: rgba(13,13,12,0.94);
+  border: 0.5px solid rgba(255,255,255,0.16);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s, transform 0.16s;
+  z-index: 30;
+}
+.buy-share-control:hover::after,
+.buy-share-control:focus-within::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 .btn-slide-disabled {
   font-size: 13px;
   font-family: var(--font-body);
