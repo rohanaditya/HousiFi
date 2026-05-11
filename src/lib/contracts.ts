@@ -1,3 +1,7 @@
+import { ethers } from "ethers";
+
+export const SEPOLIA_CHAIN_ID = 11155111;
+
 export const CONTRACTS = {
   testUSDC:     "0x9076a4d4f905C109D5A8E41DdA4E767F44A16308",
   propertyBuy:  "0xd32ea960dB2C7EFF89677f5de3668E1bC29600Fd",
@@ -11,3 +15,28 @@ export const PROPERTY_TOKENS: Record<number, string> = {
   4: "0xBE4C743c7328fa29d01b66dB3746de49218F6286",
   5: "0x2D6fd3c94A313fcAeAddDd4DEe54889C172fd552",
 };
+
+export async function assertContractExists(
+  signer: ethers.Signer,
+  address: string | undefined,
+  label: string
+) {
+  if (!address) {
+    throw new Error(`${label} contract address is not configured for this property.`);
+  }
+
+  const provider = signer.provider;
+  if (!provider) {
+    throw new Error("Wallet provider is not available.");
+  }
+
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+    throw new Error("Please switch MetaMask to Sepolia and try again.");
+  }
+
+  const code = await provider.getCode(address);
+  if (code === "0x") {
+    throw new Error(`${label} contract was not found on Sepolia at ${address}.`);
+  }
+}

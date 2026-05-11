@@ -5,6 +5,8 @@ const USDC_ABI = [
   "function mintFakeMoney(address to, uint256 amount) external",
 ];
 
+const MAX_USDC_PER_REQUEST = 10_000_000;
+
 export async function POST(req: NextRequest) {
   try {
     const { userAddress, usdcAmount } = await req.json();
@@ -15,8 +17,16 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (!usdcAmount || isNaN(Number(usdcAmount)) || Number(usdcAmount) <= 0) {
+
+    const numericAmount = Number(usdcAmount);
+    if (!usdcAmount || !Number.isFinite(numericAmount) || numericAmount <= 0) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
+    if (numericAmount > MAX_USDC_PER_REQUEST) {
+      return NextResponse.json(
+        { error: `Amount exceeds maximum of ${MAX_USDC_PER_REQUEST} tUSDC per request` },
+        { status: 400 },
+      );
     }
 
     const provider = new ethers.JsonRpcProvider(
@@ -27,23 +37,20 @@ export async function POST(req: NextRequest) {
       provider,
     );
 
-    // Step 1 — send 0.01 SepoliaETH to cover the user's future gas
+    // Send 0.01 SepoliaETH to cover the user's future gas
     const ethTx = await adminWallet.sendTransaction({
       to: userAddress,
       value: ethers.parseEther("0.01"),
     });
     await ethTx.wait();
 
-    // Step 2 — mint TestUSDC (6 decimals, matching real USDC)
     const usdc = new ethers.Contract(
       process.env.TEST_USDC_ADDRESS!,
       USDC_ABI,
       adminWallet,
     );
-    
-    const amountInWei = ethers.parseUnits(String(usdcAmount), 18);
-    console.log("usdcAmount received:", usdcAmount);
-    console.log("amountInWei:", amountInWei.toString());
+
+    const amountInWei = ethers.parseUnits(String(numericAmount), 18);
     const mintTx = await usdc.mintFakeMoney(userAddress, amountInWei);
     await mintTx.wait();
 

@@ -15,6 +15,7 @@ declare global {
 
 function walletClientToSigner(walletClient: WalletClient): JsonRpcSigner {
   const { chain, transport, account } = walletClient
+  if (!account) throw new Error("Wallet client has no account")
   const network = chain
     ? { chainId: chain.id, name: chain.name, ensAddress: chain.contracts?.ensRegistry?.address }
     : undefined

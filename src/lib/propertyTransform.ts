@@ -2,7 +2,7 @@ import { SupabaseProperty, Property } from '@/types/property'
 import { supabase } from './supabase'
 
 
-export function transformPropertyForDisplay(supabaseProperty: SupabaseProperty, index: number): Property {
+export function transformPropertyForDisplay(supabaseProperty: SupabaseProperty): Property {
   return {
     id: supabaseProperty.id,
     name: supabaseProperty.name,
@@ -32,8 +32,8 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
       return []
     }
 
-    return (data as SupabaseProperty[]).map((prop, index) =>
-      transformPropertyForDisplay(prop, index)
+    return (data as SupabaseProperty[]).map((prop) =>
+      transformPropertyForDisplay(prop)
     )
   } catch (error) {
     console.error('Error fetching properties from Supabase:', error)

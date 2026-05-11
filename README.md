@@ -1,136 +1,96 @@
-# Housifi - Enterprise Frontend
+# HousiFi
 
-An enterprise-level Next.js frontend application with Google OAuth authentication.
+Fractional real estate investment on Sepolia. Users pool a down payment by buying a majority (85%) or minority (15%) share of a property. Ownership and payouts are settled on-chain via ERC-20 property tokens and USDC.
 
-## Project Structure
+## Stack
+
+| Layer | Tech |
+|---|---|
+| Frontend | Next.js (App Router), React, TypeScript |
+| Styling | Tailwind CSS + global CSS variables |
+| Web3 | wagmi, ethers.js v6, MetaMask |
+| Database | Supabase (Postgres) |
+| Smart contracts | Solidity / Hardhat (Sepolia testnet) |
+
+## Project structure
 
 ```
 src/
 ├── app/
 │   ├── api/
-│   │   └── auth/[...nextauth]/     # NextAuth API routes
-│   ├── login/                        # Login page with Google OAuth
-│   ├── dashboard/                    # Landing/dashboard page
-│   ├── layout.tsx                    # Root layout with session provider
-│   ├── page.tsx                      # Home page (redirects based on auth)
-│   ├── globals.css                   # Global styles
-│   └── providers.tsx                 # Session provider
+│   │   ├── faucet/route.ts          # Mints tUSDC + sends Sepolia ETH to user
+│   │   └── investment/
+│   │       ├── buy/route.ts         # Records a buy in Supabase
+│   │       └── sell/route.ts        # Records a sell in Supabase
+│   ├── layout.tsx                   # Root layout (Web3Provider)
+│   └── page.tsx                     # Landing page (Navbar + Carousel)
+├── components/
+│   ├── BuySharesButton.tsx          # Triggers on-chain buy + API record
+│   ├── Carousel.tsx                 # Property carousel with investment panels
+│   ├── Navbar.tsx                   # Wallet connect/disconnect, USDC modal
+│   ├── USDCModal.tsx                # Faucet UI for test USDC
+│   └── Web3Provider.tsx             # wagmi + react-query providers
+├── lib/
+│   ├── hooks/
+│   │   ├── useInvestments.ts        # Fetches active investments for connected wallet
+│   │   └── useProperties.ts        # Fetches properties from Supabase
+│   ├── abis/                        # Contract ABIs (PropertyBuy, PropertySell, PropertyToken, TestUSDC)
+│   ├── buyShares.ts                 # On-chain buy flow (approve tUSDC → buyShares)
+│   ├── contracts.ts                 # Addresses, PROPERTY_TOKENS map, assertContractExists
+│   ├── propertyTransform.ts        # Supabase row → Property display type
+│   ├── sellShares.ts               # On-chain sell flow (approve token → sellShares)
+│   ├── supabase.ts                 # Supabase anon client singleton
+│   └── useEthersSigner.ts          # wagmi → ethers.js signer bridge + Sepolia switcher
+├── types/
+│   ├── investment.ts               # Investment interface
+│   └── property.ts                 # SupabaseProperty + Property interfaces
+contracts/                          # Hardhat workspace (separate package.json + tsconfig)
 ```
 
-## Prerequisites
+## Environment variables
 
-- Node.js 18+
-- npm or yarn
+Create a `.env` file (never commit it):
 
-## Setup Instructions
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=          # Server-only — used by API routes
 
-### 1. Install Dependencies
+# Alchemy (Sepolia RPC)
+NEXT_PUBLIC_ALCHEMY_URL=            # Also injected as RPC URL when switching chains
 
-Dependencies are already installed. If you need to reinstall:
+# Faucet admin wallet
+ADMIN_PRIVATE_KEY=                  # Signs faucet transactions server-side
+TEST_USDC_ADDRESS=                  # TestUSDC contract address
+
+# Optional — kept in sync with contracts.ts
+NEXT_PUBLIC_PROPERTY_BUY_ADDRESS=
+NEXT_PUBLIC_PROPERTY_SELL_ADDRESS=
+NEXT_PUBLIC_ADMIN_ADDRESS=
+```
+
+## Getting started
 
 ```bash
 npm install
+npm run dev        # http://localhost:3000
 ```
 
-### 2. Configure Google OAuth
+Connect MetaMask to **Sepolia**. Use the "Add USDC" button in the navbar to receive test funds before investing.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project
-3. Enable the Google+ API
-4. Create OAuth 2.0 credentials (Web Application)
-5. Set authorized redirect URIs to: `http://localhost:3000/api/auth/callback/google`
+## Smart contracts
 
-### 3. Environment Variables
+The Hardhat workspace lives in `contracts/` and has its own `package.json`. Deployed on Sepolia:
 
-Update `.env.local` with your Google OAuth credentials:
+| Contract | Address |
+|---|---|
+| TestUSDC | `0x9076a4d4f905C109D5A8E41DdA4E767F44A16308` |
+| PropertyBuy | `0xd32ea960dB2C7EFF89677f5de3668E1bC29600Fd` |
+| PropertySell | `0x13fFA9145f8885B6765F028C6D5AFf450074bbd3` |
 
-```bash
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here-change-this-in-production
+## Investment flow
 
-# Google OAuth - Get these from Google Cloud Console
-GOOGLE_CLIENT_ID=your-google-client-id-here
-GOOGLE_CLIENT_SECRET=your-google-client-secret-here
-```
+**Buy:** approve tUSDC → `PropertyBuy.buyShares` → API records investment in Supabase
 
-To generate a secure `NEXTAUTH_SECRET`:
-```bash
-openssl rand -base64 32
-```
-
-### 4. Run Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Features
-
-- **Google OAuth Authentication**: Sign in with Google account
-- **Session Management**: Automatic session handling with NextAuth.js
-- **Protected Routes**: Dashboard page is protected and requires authentication
-- **Responsive Design**: Built with Tailwind CSS for responsive UI
-- **Enterprise Ready**: Best practices for authentication and state management
-
-## Pages
-
-- **`/`** - Home page (redirects to login or dashboard based on auth status)
-- **`/login`** - Login page with Google sign-in button
-- **`/dashboard`** - Landing/dashboard page (protected, requires authentication)
-
-## Development
-
-### Build
-
-```bash
-npm run build
-```
-
-### Lint
-
-```bash
-npm run lint
-```
-
-## Deployment
-
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Set environment variables in Vercel dashboard
-4. Deploy
-
-For other platforms, ensure you set the `NEXTAUTH_URL` to your production URL.
-
-## Key Technologies
-
-- **Next.js 15** - React framework
-- **TypeScript** - Type safety
-- **NextAuth.js** - Authentication
-- **Tailwind CSS** - Styling
-- **ESLint** - Code quality
-
-## Best Practices
-
-- Never commit `.env.local` to version control
-- Always use environment variables for sensitive data
-- Keep `NEXTAUTH_SECRET` secure in production
-- Regularly update dependencies
-
-## Security Considerations
-
-- CSRF protection enabled by NextAuth.js
-- Secure session cookies
-- Protected API routes
-- Environment variables for secrets
-- Update dependencies regularly for security patches
-
-## Learning Resources
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [NextAuth.js Documentation](https://next-auth.js.org)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [Google OAuth Documentation](https://developers.google.com/identity/protocols/oauth2)
+**Sell:** approve PropertyToken → `PropertySell.sellShares` → API marks investment as sold and returns the slot
