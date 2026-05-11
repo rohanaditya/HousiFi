@@ -5,7 +5,7 @@ const USDC_ABI = [
   "function mintFakeMoney(address to, uint256 amount) external",
 ];
 
-const MAX_USDC_PER_REQUEST = 10_000;
+const MAX_USDC_PER_REQUEST = 10_000_000;
 
 export async function POST(req: NextRequest) {
   try {
