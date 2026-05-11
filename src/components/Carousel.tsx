@@ -2,22 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAccount } from 'wagmi'
-import { fetchPropertiesFromSupabase } from '@/lib/propertyTransform'
-import { supabase } from '@/lib/supabase'
 import { sellShares } from '@/lib/sellShares'
 import { getSepoliaSigner, useEthersSigner } from '@/lib/useEthersSigner'
+import { useProperties } from '@/lib/hooks/useProperties'
+import { useInvestments } from '@/lib/hooks/useInvestments'
 import type { Property } from '@/types/property'
+import type { Investment } from '@/types/investment'
 import BuySharesButton from '@/components/BuySharesButton'
 
 const DURATION = 25000
-
-interface Investment {
-  id: number
-  property_id: number
-  token_amount: number
-  usdc_paid: number
-  share_type: 'major' | 'minor'
-}
 
 function UserInvestmentPanel({
   investment,
@@ -33,6 +26,7 @@ function UserInvestmentPanel({
   const signer = useEthersSigner()
   const [selling, setSelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saleComplete, setSaleComplete] = useState(false)
 
   const currentValue = (investment.token_amount / 100) * property.flat_price
   const pnl = currentValue - investment.usdc_paid
@@ -40,7 +34,6 @@ function UserInvestmentPanel({
 
   useEffect(() => {
     if (!error) return
-
     const timer = setTimeout(() => setError(null), 3000)
     return () => clearTimeout(timer)
   }, [error])
@@ -75,7 +68,8 @@ function UserInvestmentPanel({
         const { error: apiError } = await res.json()
         throw new Error(apiError ?? 'Failed to record sale')
       }
-      alert(`Sale successful! ${usdcPayout.toLocaleString()} tUSDC has been sent to your wallet`)
+
+      setSaleComplete(true)
       onSuccess()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Transaction failed')
@@ -83,6 +77,22 @@ function UserInvestmentPanel({
       setSelling(false)
       onProcessingChange(false)
     }
+  }
+
+  if (saleComplete) {
+    return (
+      <div style={{
+        marginTop: '12px',
+        padding: '12px 14px',
+        background: 'rgba(74,222,128,0.08)',
+        borderRadius: '10px',
+        border: '1px solid rgba(74,222,128,0.25)',
+      }}>
+        <p style={{ color: '#4ade80', fontSize: '0.82rem', margin: 0 }}>
+          Sale confirmed — tUSDC sent to your wallet.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -177,60 +187,18 @@ function InvestorButtons({
 export default function Carousel() {
   const [current, setCurrent] = useState(0)
   const [barWidth, setBarWidth] = useState(0)
-  const [properties, setProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
-  const [investments, setInvestments] = useState<Record<number, Investment>>({})
   const [transactionProcessing, setTransactionProcessing] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { address } = useAccount()
-
-  const loadProperties = useCallback(async () => {
-    try {
-      const data = await fetchPropertiesFromSupabase()
-      setProperties(data)
-    } catch (error) {
-      console.error('Failed to load properties:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  const loadInvestments = useCallback(async (walletAddress: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('investments')
-        .select('id, property_id, token_amount, usdc_paid, share_type')
-        .ilike('investor_address', walletAddress)
-        .eq('status', 'active')
-      if (error) throw error
-      const byProperty: Record<number, Investment> = {}
-      for (const inv of data ?? []) {
-        byProperty[inv.property_id] = inv
-      }
-      setInvestments(byProperty)
-    } catch (err) {
-      console.error('Failed to load investments:', err)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadProperties()
-  }, [loadProperties])
-
-  useEffect(() => {
-    if (address) {
-      loadInvestments(address)
-    } else {
-      setInvestments({})
-    }
-  }, [address, loadInvestments])
+  const { properties, loading, reload: reloadProperties } = useProperties()
+  const { investments, reload: reloadInvestments } = useInvestments(address)
 
   const handleSuccess = useCallback(() => {
-    loadProperties()
-    if (address) loadInvestments(address)
-  }, [loadProperties, loadInvestments, address])
+    reloadProperties()
+    if (address) reloadInvestments(address)
+  }, [reloadProperties, reloadInvestments, address])
 
   const goTo = useCallback((n: number) => {
     if (properties.length > 0) {
@@ -367,7 +335,7 @@ export default function Carousel() {
           <button className="carousel-nav right" onClick={next} aria-label="Next">&#8594;</button>
         </div>
 
-        {/* Thumbnails — real property images */}
+        {/* Thumbnails */}
         <div className="thumbs-strip">
           {properties.map((prop, idx) => (
             <div
